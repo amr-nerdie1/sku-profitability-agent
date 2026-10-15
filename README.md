@@ -34,6 +34,18 @@ flowchart LR
 
 **Guardrails live in the tools, not the prompt:** the model can't invent a number (every figure comes from SQL), can't ticket a low-confidence SKU, and can't ticket an action the judge didn't validate.
 
+## Prompts, guardrails and hallucination control
+
+| Question | Answer in this repo |
+|---|---|
+| What is the model told? | `SYSTEM` in [`agent.py`](src/skuagent/agent.py) and the judge `PROMPT` in [`judge.py`](src/skuagent/judge.py), both verbatim. The judge never sees the rules engine's answer |
+| What stops invented numbers? | `write_report` checks every figure in the insights note against tool results (unit-aware), plus every action ID, Jira key and SKU |
+| What if the model keeps hallucinating? | Two rejections with the exact problems listed, then the model's note is withheld and a deterministic note is published instead |
+| What stops a wrong diagnosis reaching a team? | LLM-as-judge on a stratified sample; under 70% agreement, the action group is held for human review |
+| How is it tested? | 13 tests, including 5 fabricated sentences that must each be rejected |
+
+Full write-up: [`docs/LLM_DESIGN.md`](docs/LLM_DESIGN.md).
+
 ## The action matrix (excerpt)
 
 | Driver | Root cause | Action ID | Owner | Jira |
@@ -71,8 +83,8 @@ Because each synthetic SKU has a hidden true cause, accuracy can be measured dir
 ```
 Week 2026-W42: 3,000 SKUs, contribution margin 10.2%.
 971 SKUs lose money on every sale, $972,201 in total.
-12 Jira tickets raised across 5 teams.
-Validation: judge agreed on 90% of sampled actions. Held for human review: SPA-104, SPA-107, SPA-303.
+13 Jira tickets raised across 6 teams.
+Validation: judge agreed on 98% of sampled actions. Held for human review: SPA-104.
 689 thin SKUs are monitored at pattern level only.
 ```
 
@@ -90,7 +102,7 @@ pip install -r requirements.txt
 python run_agent.py                              # offline plan, Jira dry-run, no keys needed
 ANTHROPIC_API_KEY=... python run_agent.py --live # Claude drives the tool loop and writes the insights
 # real tickets: also set JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN
-pytest -q                                        # 6 tests: reconciliation, both accuracy fixes, guardrails, routing
+pytest -q                                        # 13 tests: reconciliation, accuracy fixes, routing, hallucination guardrails
 ```
 
 Offline mode runs the same tools in a fixed plan and uses a reference judge built from a different rule path (cost-share ranking, count-based reasons), labelled as such in every output.
@@ -101,4 +113,4 @@ Offline mode runs the same tools in a fixed plan and uses a reference judge buil
 - **Actions, not dashboards.** Each ticket names one team, one action, the SKUs, the $ at stake and how "done" is measured.
 
 ---
-**Amrisha Rajkhowa** · Product & analytics leader · [LinkedIn](https://ca.linkedin.com/in/amrisha-rajkhowa-ubc) · see also [bayesian-bid-pricing](https://github.com/amr-nerdie1/bayesian-bid-pricing)
+**Amrisha Rajkhowa** · Product & analytics leader · [LinkedIn](https://ca.linkedin.com/in/amrisha-rajkhowa-ubc) · see also [category-growth-agent](https://github.com/amr-nerdie1/category-growth-agent) · [ltl-freight-auditor](https://github.com/amr-nerdie1/ltl-freight-auditor) · [bayesian-bid-pricing](https://github.com/amr-nerdie1/bayesian-bid-pricing)
